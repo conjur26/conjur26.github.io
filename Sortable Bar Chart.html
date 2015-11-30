@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
+  <title>Sortable Bar Chart</title>
+  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js" ></script>
+  <script type="text/javascript" src="http://d3js.org/d3.v3.js"></script>
+  <style>
+     body {
+       font: 10px sans-serif;
+     }
+     .chart {
+       font-family: Arial, sans-serif;
+       font-size: 10px;
+     }
+     .axis path, .axis line {
+       fill: none;
+       stroke: #000000;
+       stroke-width: 1px;
+       shape-rendering: crispEdges;
+     }
+     .bar {
+       z-index: 1000;
+     }
+     #button-container {
+     	 width: 480px;
+     	 padding: 20px 40px 20px 80px;
+     }
+     button {
+       margin-right: 45px;
+     }
+  </style>
+
+  <script type="text/javascript">
+  	
+  	//Global variables
+  	var data;
+ 	  var svg;
+ 	  var margin = {top: 40, right: 40, bottom: 40, left:80},
+		    width = 600,
+		    height = 500;
+		var x, y;
+		var colorScale;
+		var data = 
+		   [{"Quantity":"100","fruits":"Apples","sequence":0,"color":"#EE0000"},
+		    {"Quantity":"60", "fruits":"Pears","sequence":1,"color":"#C5E946"},
+		    {"Quantity":"70", "fruits":"Tangerines","sequence":2,"color":"#FF6800"},
+		    {"Quantity":"90", "fruits":"Pomegranates","sequence":3,"color":"#CD2626"},
+		    {"Quantity":"50", "fruits":"Oranges","sequence":4,"color":"#FFA500"}];
+		var sort = "none";
+		    
+  	$(document).ready(function() {
+		  displayBars();
+		});
+		
+		function displayBars() {
+			
+			 //Set color scale based on current sort order of data array
+       var sortedColors = [];
+       var nest = d3.nest()
+                    .key(function(d) { sortedColors.push(d.color); })
+                    .entries(data);
+		   colorScale = d3.scale.linear()
+		                      .domain([0,1,2,3,4])
+		                      .range(sortedColors);
+		
+		   x = d3.scale.linear()
+		             .domain([0, d3.max(data, function(d) { return +d.Quantity;})])
+		             .range([0,width - margin.left - margin.right]);
+		
+		   y = d3.scale.ordinal()
+		             .domain(data.map(function(d) {return d.fruits;}))
+		             .rangeBands([0,height - margin.top - margin.bottom]);
+		
+		   var yAxis = d3.svg.axis()
+		                 .scale(y)
+		                 .orient('left')
+		                 .tickSize(0)
+		                 .tickPadding(8);
+		
+		   var xAxis = d3.svg.axis() 
+		                .scale(x)
+		                .orient('bottom')
+		                .tickPadding(8);
+		
+		   svg = d3.select('#bar-demo')
+		               .append('svg')
+		               .attr('class', 'chart')
+		               .attr('width', width)
+		               .attr('height', height)
+		               .append('g')
+		               .attr('transform', 'translate(' + margin.left + ', ' + margin.top + ')');
+		
+		   svg.append('g')
+		      .attr('class', 'axis')
+		      .attr('transform', 'translate(0, ' + (height - margin.top - margin.bottom) + ')') 
+		      .call(xAxis);
+		
+		   svg.append('g')
+		      .attr('class', 'axis')
+		      .call(yAxis);
+		
+		   svg.selectAll('.chart')
+		      .data(data)
+		      .enter()
+		      .append('rect')
+		      .attr('class', 'bar')
+		      .attr('x', 0)
+		      .attr('y', function(d,i){return -1 + margin.top + y.rangeBand() * i - 40;})
+		      .transition()
+		      .ease("linear")
+          .delay(function (d, i) { return i*300; })
+		      .attr('height', y.rangeBand())
+		      .attr('width', function(d) { return x(d.Quantity) })
+		      .styleTween("fill", function(d,i) { return d3.interpolate("#FFFF00", colorScale(i)); });
+		
+		   svg.append("text")
+		      .attr("x", (width / 2 - margin.left))
+		      .attr("y", 0 - (margin.top / 2))
+		      .attr("text-anchor", "middle")
+		      .style("font-size", "20px")
+		      .text("Practice Assignment 1");
+		  }
+
+		function sortByQuantity() {
+			  var data1;
+			  $('svg').remove();
+			  if (sort == "none" || sort == "descending") {
+			  	sort = "ascending";
+          data1 = data.sort(function(a, b){return a.Quantity-b.Quantity});
+        } else if (sort == "ascending") {
+        	sort = "descending";
+        	data1 = data.sort(function(a, b){return b.Quantity-a.Quantity});
+        }
+		    displayBars();
+    }
+    function sortByFruit() {
+    	var data2;
+    	$('svg').remove();
+    	if (sort == "none" || sort == "descending") {
+    		sort = "ascending";
+        data2 = data.sort(function(el1, el2) {
+          return compare1(el1, el2, ["fruits"])
+        });
+      } else if (sort == "ascending") {
+      	sort = "descending";
+      	data2 = data.sort(function(el1, el2) {
+          return compare2(el1, el2, ["fruits"])
+        });
+      }
+      displayBars();
+    }
+    function reset() {
+    	//Return to original sort order
+    	sort = "none";
+    	$('svg').remove();
+    	data = data.sort(function(a, b){return a.sequence-b.sequence});
+    	displayBars(data);
+    }
+    function compare1(el1, el2, index) {
+      return el1[index] == el2[index] ? 0 : (el1[index] < el2[index] ? -1 : 1);
+    }
+    function compare2(el1, el2, index) {
+      return el1[index] == el2[index] ? 0 : (el1[index] > el2[index] ? -1 : 1);
+    }
+		
+  </script>
+  </head>
+	<body>
+		<div id="button-container">
+		  <button onclick="sortByQuantity()">Sort by size</button> 
+      <button onclick="sortByFruit()">Sort alphabetically</button> 
+      <button onclick="reset()">Reset</button>
+    </div>
+    <div id="bar-demo"></div>
+</body>
+</html>
